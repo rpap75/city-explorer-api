@@ -11,27 +11,29 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 
-app.get('/movies', async (request, response, next) => {
-  console.log('inside moive route');
+app.get('/movies', async (request, response) => {
 
-  let url = `https://api.themoviedb.org/3/movie/550?api_key=${MOVIE_API_KEY}`;
+  let url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${request.query.searchQuery}`;
+  // console.log(url);
+
 
   let movieResponse = await axios({
     method: 'GET',
     url: url,
   });
-  let movieData = movieResponse.data.data;
+  let movieData = movieResponse.data.results;
+  console.log('hello hello hello', movieData);
 
   try {
     let movieArray = movieData.map(movie => new MovieList(movie));
     response.status(200).send(movieArray);
   } catch (e) {
-    response.status(500).send('Invalid Search Query', e);
+    response.status(500).send('Invalid Search Query');
   }
 });
 
 
-app.get('/weather', async (request, response, next) => {
+app.get('/weather', async (request, response) => {
 
   let lat = request.query.lat;
   let lon = request.query.lon;
@@ -43,7 +45,6 @@ app.get('/weather', async (request, response, next) => {
     url: url,
   });
   let weatherData = weatherResponse.data.data;
-
 
   try {
     let cityArray = weatherData.map(day => new Forecast(day));
@@ -67,7 +68,7 @@ class Forecast {
   }
 }
 
-app.use('*', (request, response, next) => {
+app.use('*', (request, response) => {
   response.status(404).send('Invalid Request, route not found');
 });
 
