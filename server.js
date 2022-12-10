@@ -8,29 +8,37 @@ const axios = require('axios');
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 const MOVIE_API_KEY = process.env.MOVIE_API_KEY;
 const PORT = process.env.PORT || 3001;
-
+const cache = {};
 app.use(cors());
+
+
 
 app.get('/movies', async (request, response) => {
 
   let url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${request.query.searchQuery}`;
-  // console.log(url);
+  let searchQuery = request.query.searchQuery;
 
+  if (cache[searchQuery]) {
 
-  let movieResponse = await axios({
-    method: 'GET',
-    url: url,
-  });
-  let movieData = movieResponse.data.results;
-  console.log('hello hello hello', movieData);
+    // console.log('hit cache!');
+  } else {
+    // console.log('cache miss');
+    let movieResponse = await axios({
+      method: 'GET',
+      url: url,
+    });
+    let movieData = movieResponse.data.results;
 
-  try {
-    let movieArray = movieData.map(movie => new MovieList(movie));
-    response.status(200).send(movieArray);
-  } catch (e) {
-    response.status(500).send('Invalid Search Query');
+    try {
+      let movieArray = movieData.map(movie => new MovieList(movie));
+      cache[searchQuery] = movieArray;
+    } catch (e) {
+      response.status(500).send('Invalid Search Query');
+    }
   }
+  response.status(200).send(cache[searchQuery]);
 });
+
 
 
 app.get('/weather', async (request, response) => {
@@ -40,19 +48,30 @@ app.get('/weather', async (request, response) => {
 
   let url = `https://api.weatherbit.io/v2.0/forecast/daily?key=${WEATHER_API_KEY}&lat=${lat}&lon=${lon}`;
 
-  let weatherResponse = await axios({
-    method: 'GET',
-    url: url,
-  });
-  let weatherData = weatherResponse.data.data;
+  let searchQuery = request.query.searchQuery;
 
-  try {
-    let cityArray = weatherData.map(day => new Forecast(day));
-    console.log(cityArray);
-    response.status(200).send(cityArray);
-  } catch (e) {
-    response.status(500).send('Invalid Search Query', e);
+  if (cache[searchQuery]) {
+
+    console.log('hit cache!');
+  } else {
+    console.log('cache miss');
+
+    let weatherResponse = await axios({
+      method: 'GET',
+      url: url,
+    });
+    let weatherData = weatherResponse.data.data;
+
+    try {
+      let cityArray = weatherData.map(day => new Forecast(day));
+      cache[searchQuery] = cityArray;
+      // console.log(cityArray);
+      // response.status(200).send(cityArray);
+    } catch (e) {
+      response.status(500).send('Invalid Search Query', e);
+    }
   }
+  response.status(200).send(cache[searchQuery]);
 });
 
 class MovieList {
