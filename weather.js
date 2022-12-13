@@ -1,3 +1,5 @@
+'use strict';
+
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 const axios = require('axios');
 const cache = {};
@@ -18,28 +20,31 @@ async function handleGetWeather(request, response) {
 
   let searchQuery = request.query.searchQuery;
 
-  if (cache[searchQuery]) {
+  if (cache[searchQuery] && (Date.now() - cache[searchQuery].timestamp < 50000)) {
+    console.log('weather hit cache!');
 
-    console.log('hit cache!');
   } else {
-    console.log('cache miss');
+    console.log('weather cache miss');
 
     let weatherResponse = await axios({
       method: 'GET',
       url: url,
     });
+
+    cache[searchQuery] = {};
+
     let weatherData = weatherResponse.data.data;
 
     try {
       let cityArray = weatherData.map(day => new Forecast(day));
-      cache[searchQuery] = cityArray;
-      // console.log(cityArray);
-      // response.status(200).send(cityArray);
+      cache[searchQuery].data = cityArray;
+      cache[searchQuery].timestamp = Date.now();
     } catch (e) {
       response.status(500).send('Invalid Search Query', e);
     }
   }
-  response.status(200).send(cache[searchQuery]);
+
+  response.status(200).send(cache[searchQuery].data);
 }
 
 module.exports = { handleGetWeather };
